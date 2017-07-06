@@ -6,7 +6,11 @@ class SouTable extends Component {
     super(props);
 
     this.state = {
-      tableData: props.tableData,
+      tableData: {
+        past:[],
+        present:props.tableData,
+        future:[]
+      },
       tableCol: Math.max(props.minTableCol, props.tableData.length),
       tableHeaders: props.tableHeaders,
       tableHeaderRows: undefined,
@@ -66,6 +70,9 @@ class SouTable extends Component {
     this.renderHeader = this.renderHeader.bind(this);
     this.renderInnerTable = this.renderInnerTable.bind(this);
     this.getOffset = this.getOffset.bind(this);
+    this.nextTableData = this.nextTableData.bind(this);
+    this.undoTableData = this.undoTableData.bind(this);
+    this.redoTableData = this.redoTableData.bind(this);
 
     let tableHeaderRows = [];
     if (this.state.tableHeaders && this.state.tableHeaders.length > 0) {
@@ -122,6 +129,17 @@ class SouTable extends Component {
 
   }
 
+nextTableData(data){
+  const tableData = this.state.tableData;
+  const newPast = [...tableData.past,tableData.present];
+  return {
+    past:newPast,
+    present:data,
+    future:[]
+  }
+}
+
+
   componentDidMount() {
     this.styleTable();
   }
@@ -131,7 +149,7 @@ class SouTable extends Component {
     const tableRow = Math.max(nextProps.minTableRow,
       nextProps.tableData.length > 0 ? nextProps.tableData[0].length : 0, this.state.tableRow);
     this.setState({
-      tableData: nextProps.tableData,
+      tableData: this.nextTableData(nextProps.tableData),
       tableCol,
       tableRow,
     });
@@ -155,7 +173,7 @@ class SouTable extends Component {
       isContextMenuHidden: false,
     };
     if (target.tagName === 'TD' || target.tagName === 'TH') {
-      if (target.className === 'sou-selected-cell') {
+      if (target.className === 'sou-selected-cell ') {
         this.setState(contextMenuState);
       } else {
         this.selectCell(target, Object.assign({}, this.mouseDownState, contextMenuState));
@@ -312,7 +330,8 @@ class SouTable extends Component {
   }
 
   updateTable(value) {
-    const { tableData, colIndex, rowIndex } = this.state;
+    const {colIndex, rowIndex } = this.state;
+    const tableData = this.state.tableData.present;
     const newTableData = [];
     const tableDataCol = tableData.length;
     const tableDataRow = tableData.length > 0 ? tableData[0].length : 0;
@@ -334,13 +353,13 @@ class SouTable extends Component {
 
     const trimmedTableData = this.trimData(newTableData);
     this.setState({
-      tableData: trimmedTableData,
+      tableData: this.nextTableData(trimmedTableData),
     });
     this.props.getData(trimmedTableData);
   }
 
   getTableDataForPaste(pasteData, pasteColIndex, pasteRowIndex) {
-    const { tableData } = this.state;
+    const tableData  = this.state.tableData.present;
     const newTableData = [];
     const tableDataCol = tableData.length;
     const tableDataRow = tableData.length > 0 ? tableData[0].length : 0;
@@ -412,7 +431,7 @@ class SouTable extends Component {
         const pasteEndColIndex = pasteColIndex + pasteCol - 1;
         const pasteEndRowIndex = pasteRowIndex + pasteRow - 1;
         this.selectCell(pasteTd, {
-          tableData: trimmedData,
+          tableData: this.nextTableData(trimmedData),
           tableCol: Math.max(this.state.tableCol, trimmedData.length),
           tableRow: Math.max(this.state.tableRow, trimmedData.length > 0 ? trimmedData[0].length : 0),
           colIndex: pasteColIndex,
@@ -423,7 +442,7 @@ class SouTable extends Component {
         });
       } else {
         this.setState({
-          tableData: trimmedData,
+          tableData: this.nextTableData(trimmedData),
           tableCol: Math.max(this.state.tableCol, trimmedData.length),
           tableRow: Math.max(this.state.tableRow, trimmedData.length > 0 ? trimmedData[0].length : 0),
         });
@@ -538,7 +557,7 @@ class SouTable extends Component {
     // step 4: select cells after paste
     const selectTd = this.table.querySelector(`[data-col='${selectColIndex}'][data-row='${selectRowIndex}']`);
     this.selectCell(selectTd, {
-      tableData: trimmedData,
+      tableData: this.nextTableData(trimmedData),
       colIndex: selectColIndex,
       rowIndex: selectRowIndex,
       endColIndex: selectEndColIndex,
@@ -548,7 +567,8 @@ class SouTable extends Component {
 
   insertCol(d) {
     return () => {
-      const { tableData, tableCol, colIndex } = this.state;
+      const {tableCol, colIndex } = this.state;
+      const tableData =this.state.tableData.present;
       if (colIndex + d < tableData.length) {
         const emptyCol = [];
         for (let i = 0; i < tableData.length + 1; i++) {
@@ -570,14 +590,15 @@ class SouTable extends Component {
 
   insertRow(d) {
     return () => {
-      const { tableData, tableRow, rowIndex } = this.state;
+      const {tableRow, rowIndex } = this.state;
+      tableData = this.state.tableData.present;
       const tableDataRow = tableData.length > 0 ? tableData[0].length : 0;
       if (rowIndex + d < tableDataRow) {
         for (let i = 0; i < tableData.length; i++) {
           tableData[i].splice(rowIndex + d, 0, '');
         }
         this.setState({
-          tableData,
+          tableData:this.nextTableData(tableData),
           tableRow: tableRow + 1,
         });
         this.props.getData(tableData);
@@ -590,7 +611,8 @@ class SouTable extends Component {
   }
 
   deleteCol() {
-    const { tableData, tableCol, colIndex } = this.state;
+    const { tableCol, colIndex } = this.state;
+    const tableData = this.state.tableData.present;
     if (colIndex < tableData.length) {
       tableData.splice(colIndex, 1);
       this.setState({
@@ -606,7 +628,8 @@ class SouTable extends Component {
   }
 
   deleteRow() {
-    const { tableData, tableRow, rowIndex } = this.state;
+    const { tableRow, rowIndex } = this.state;
+    const tableData = this.state.tableData;
     const tableDataRow = tableData.length > 0 ? tableData[0].length : 0;
     if (rowIndex < tableDataRow) {
       for (let i = 0; i < tableData.length; i++) {
@@ -754,7 +777,8 @@ class SouTable extends Component {
   }
 
   copy(toClipboard = true) {
-    const { tableData, colIndex, rowIndex } = this.state;
+    const { colIndex, rowIndex } = this.state;
+    const tableData = this.state.tableData.present;
     let { endColIndex, endRowIndex } = this.state;
     if (endColIndex === undefined) {
       endColIndex = colIndex;
@@ -841,7 +865,7 @@ class SouTable extends Component {
     this.updateTableOnPaste(data);
   }
 
-  getSwitchedTableData(tableData = this.state.tableData) {
+  getSwitchedTableData(tableData = this.state.tableData.present) {
     const switchedTableData = [];
     const tableDataCol = tableData.length;
     const tableDataRow = tableData.length > 0 ? tableData[0].length : 0;
@@ -855,14 +879,14 @@ class SouTable extends Component {
   }
 
   switchColRow() {
-    const { tableData } = this.state;
+    const tableData = this.state.tableData.present;
     const tableDataCol = tableData.length;
     const tableDataRow = tableData.length > 0 ? tableData[0].length : 0;
     const newTableData = this.getSwitchedTableData();
     const tableCol = Math.max(this.props.minTableCol, tableDataRow, this.state.tableCol);
     const tableRow = Math.max(this.props.minTableRow, tableDataCol, this.state.tableRow);
     this.setState({
-      tableData: newTableData,
+      tableData: this.nextTableData(newTableData),
       tableCol,
       tableRow,
     });
@@ -904,7 +928,7 @@ class SouTable extends Component {
       }
       const sortedTableData = this.getSwitchedTableData([firstRow].concat(restRows));
       this.setState({
-        tableData: sortedTableData,
+        tableData: this.nextTableData(sortedTableData),
       });
       this.props.getData(sortedTableData);
     };
@@ -971,7 +995,8 @@ class SouTable extends Component {
   }
 
   renderTable() {
-    let { tableData, tableCol, tableRow, tableHeaders, colIndex, rowIndex, endColIndex, endRowIndex, tableHeaderRows, headerLeafs} = this.state;
+    let {tableCol, tableRow, tableHeaders, colIndex, rowIndex, endColIndex, endRowIndex, tableHeaderRows, headerLeafs} = this.state;
+    const tableData = this.state.tableData.present;
     let showHeader = false;
     const { width, height, minCellWidth, cellHeight } = this.props;
 
@@ -1404,7 +1429,8 @@ class SouTable extends Component {
       if (endInnerRowIndex) { selector += `[data-inner-row='${endInnerRowIndex}']` }
       const endTd = this.table.querySelector(selector);
       if(!endTd){
-        debugger;
+        //debugger;
+        return;
       }
       const {
         offsetTop: endOffsetTop,
@@ -1665,9 +1691,43 @@ class SouTable extends Component {
     );
   }
 
+undoTableData(){
+  const {tableData} = this.state;
+    if(tableData.past.length==0){
+      return;
+    }
+  const previous = tableData.past[tableData.past.length-1];
+  const newPast = tableData.past.slice(0,tableData.past.length-1);
+  this.setState({
+    tableData: {
+    past:newPast,
+    present:previous,
+    future:[tableData.present,...tableData.future]
+  }
+})
+}
+
+redoTableData(){
+  const {tableData} = this.state;
+  if(tableData.future.length==0){
+      return;
+    }
+  const next = tableData.future[0];
+  const newFuture = tableData.future.slice(1);
+  this.setState({
+    tableData:{
+    past:[...tableData.past,tableData.present],
+    present:next,
+    future:newFuture
+  }
+  })
+}
   render() {
     const { width, height } = this.props;
     return (
+      <div>
+      <a className='a-btn' onClick={this.undoTableData}>undo</a>
+      <a className='a-btn' onClick={this.redoTableData}>redo</a>
       <div
         className="sou-table-wrapper"
         style={{
@@ -1676,8 +1736,10 @@ class SouTable extends Component {
         }}
         ref={wrapper => this.wrapper = wrapper}
         >
+
         {this.renderTable()}
         {this.renderContext()}
+      </div>
       </div>
     );
   }

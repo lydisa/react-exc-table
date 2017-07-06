@@ -89,21 +89,3 @@ function doubleClick(callback) {
   }
 }
 
-function renderSubTable(col, row) {
-  return (<table className='inner-table sou-table'>
-    <tbody>
-      <tr>
-        <td>a</td>
-        <td>a</td>
-        <td>a</td>
-        <td>a</td>
-      </tr>
-      <tr>
-        <td>b</td>
-        <td>b</td>
-        <td>b</td>
-        <td>b</td>
-      </tr>
-    </tbody>
-  </table>)
-}
